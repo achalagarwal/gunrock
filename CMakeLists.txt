@@ -1,7 +1,7 @@
 project(gunrock)
 
 set(gunrock_VERSION_MAJOR 1)
-set(gunrock_VERSION_MINOR 1)
+set(gunrock_VERSION_MINOR 2)
 set(gunrock_VERSION_PATCH 0)
 add_definitions("-DGUNROCKVERSION=${gunrock_VERSION_MAJOR}.${gunrock_VERSION_MINOR}.${gunrock_VERSION_PATCH}")
 
@@ -30,9 +30,9 @@ else (ENABLE_WARNINGS)
 endif (ENABLE_WARNINGS)
 # end /* Suppress all warnings from gcc */
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++11 -fPIC")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++14 -fPIC")
 
 option(CMAKE_VERBOSE_MAKEFILE OFF)
 
@@ -55,6 +55,7 @@ include(${CMAKE_SOURCE_DIR}/cmake/FindOpenMP.cmake)
 if (METIS_LIBRARY)
   include(${CMAKE_SOURCE_DIR}/cmake/FindMetis.cmake)
 endif()
+include(${CMAKE_SOURCE_DIR}/cmake/FindFAISS.cmake)
 # end /* Include Boost, OpenMP & Metis */
 
 # begin /* How can I pass git SHA1 to compiler as definition using cmake? */
@@ -139,6 +140,8 @@ set(GENCODE_SM72
   -gencode=arch=compute_72,code=sm_72 -gencode=arch=compute_72,code=compute_72)
 set(GENCODE_SM75
   -gencode=arch=compute_75,code=sm_75 -gencode=arch=compute_75,code=compute_75)
+set(GENCODE_SM80
+  -gencode=arch=compute_80,code=sm_80 -gencode=arch=compute_80,code=compute_80)
 
 #set(GENCODE -gencode=arch=compute_10,code=compute_10) # at least generate PTX
 # end /* SET GENCODE_SM */
@@ -270,7 +273,7 @@ endif ()
 if (CUDA_VERSION VERSION_EQUAL "9.0" OR CUDA_VERSION VERSION_GREATER "9.0")
   option(GUNROCK_GENCODE_SM70
     "ON to generate code for Compute Capability 7.0 devices (e.g. Volta V100)"
-    OFF)
+    ON)
   option(GUNROCK_GENCODE_SM72
     "ON to generate code for Compute Capability 7.2 devices (e.g. Jetson AGX Xavier)"
     OFF)
@@ -283,9 +286,16 @@ if (CUDA_VERSION VERSION_EQUAL "10.0" OR CUDA_VERSION VERSION_GREATER "10.0")
     OFF)
 endif ()
 
+#Ampere Architecture: CUDA 11
+if (CUDA_VERSION VERSION_EQUAL "11.0" OR CUDA_VERSION VERSION_GREATER "11.0")
+  option(GUNROCK_GENCODE_SM80
+    "ON to generate code for Compute Capability 8.0 devices"
+    OFF)
+endif ()
+
 option (CUDA_AUTODETECT_GENCODE
   "On to enable autodetection of appropriate gencode=X options for each detected device"
-  ON)
+  OFF)
 
 option(CUDA_VERBOSE_PTXAS
   "On to enable verbose output from the PTXAS assembler."
@@ -347,6 +357,10 @@ endif(GUNROCK_GENCODE_SM72)
 if (GUNROCK_GENCODE_SM75)
   set(GENCODE ${GENCODE} ${GENCODE_SM75})
 endif(GUNROCK_GENCODE_SM75)
+
+if (GUNROCK_GENCODE_SM80)
+  set(GENCODE ${GENCODE} ${GENCODE_SM80})
+endif(GUNROCK_GENCODE_SM80)
 
 message(STATUS "Listing chosen GENCODE commands")
 foreach(code IN LISTS GENCODE)
